@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 800" role="img" aria-labelledby="title">
+  <title id="title">Capa original para Sintel</title>
+  <defs><linearGradient id="bg" x2="0" y2="1"><stop stop-color="#8ab9c2"/><stop offset=".48" stop-color="#d5c6a1"/><stop offset="1" stop-color="#563c39"/></linearGradient><linearGradient id="cloak"><stop stop-color="#cf5337"/><stop offset="1" stop-color="#742a2c"/></linearGradient></defs>
+  <rect width="600" height="800" fill="url(#bg)"/><path d="M0 380 148 175l122 187 109-216 221 265v185H0z" fill="#f0eee2" opacity=".6"/><path d="m0 485 161-175 134 168 131-191 174 206v105H0z" fill="#79959a" opacity=".85"/>
+  <path d="M0 595q200-114 600 0v205H0z" fill="#293338"/><circle cx="310" cy="365" r="49" fill="#d5ad83"/><path d="M270 353q30-100 87-65l32 105-39-37-45 21-22 68-30-51z" fill="#402b31"/><path d="M251 420q61-56 120 1l55 169H186z" fill="url(#cloak)"/><path d="M381 445q74-72 113-20l-37 65-55-4z" fill="#e4c49b"/>
+  <text x="45" y="702" fill="#e9e8db" font-family="Arial,sans-serif" font-size="18" letter-spacing="5">UMA JORNADA EM BUSCA</text><text x="45" y="762" fill="#fff9ed" font-family="Arial,sans-serif" font-size="64" font-weight="700" letter-spacing="8">SINTEL</text><text x="45" y="88" fill="#f9eed9" font-family="Arial,sans-serif" font-size="17" letter-spacing="4">CAPA ORIGINAL · MEU STREAMING</text>
+</svg>

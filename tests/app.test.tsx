@@ -1,1 +1,71 @@
-import{afterEach,describe,it,expect,vi}from'vitest';import{createElement,act}from'react';import{createRoot,Root}from'react-dom/client';import App from'../src/App';let host:HTMLDivElement,root:Root;afterEach(()=>{act(()=>root?.unmount());vi.restoreAllMocks();host?.remove()});describe('interface',()=>{it('abre navegação e estado vazio do catálogo',async()=>{vi.stubGlobal('fetch',vi.fn().mockResolvedValue({json:async()=>({items:[],channels:[]})}));host=document.createElement('div');document.body.append(host);root=createRoot(host);await act(async()=>{root.render(createElement(App));await Promise.resolve()});expect(host.textContent).toContain('Histórias que');await act(async()=>{[...host.querySelectorAll('nav button')].find(b=>b.textContent?.includes('Filmes'))?.click()});expect(host.textContent).toContain('CATÁLOGO PESSOAL');expect(host.textContent).toContain('Nada por aqui ainda')});it('navega para canais e mostra estado de fonte vazia',async()=>{vi.stubGlobal('fetch',vi.fn().mockResolvedValue({json:async()=>({items:[],channels:[]})}));host=document.createElement('div');document.body.append(host);root=createRoot(host);await act(async()=>{root.render(createElement(App));await Promise.resolve()});await act(async()=>{[...host.querySelectorAll('nav button')].find(b=>b.textContent?.includes('TV ao vivo'))?.click()});expect(host.textContent).toContain('Nenhum canal aprovado ainda');expect(host.textContent).toContain('Copiar playlist M3U')})});
+import { afterEach, describe, it, expect, vi } from 'vitest';
+import { createElement, act } from 'react';
+import { createRoot, Root } from 'react-dom/client';
+import App from '../src/App';
+
+let host: HTMLDivElement;
+let root: Root;
+
+afterEach(() => {
+  act(() => root?.unmount());
+  vi.restoreAllMocks();
+  host?.remove();
+});
+
+const renderApp = async (catalog: unknown = { items: [] }, channels: unknown = { channels: [] }) => {
+  vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string) => Promise.resolve({
+    json: async () => url.includes('catalog') ? catalog : channels,
+  })));
+  host = document.createElement('div');
+  document.body.append(host);
+  root = createRoot(host);
+  await act(async () => {
+    root.render(createElement(App));
+    await Promise.resolve();
+  });
+};
+
+describe('interface', () => {
+  it('abre navegação e estado vazio do catálogo', async () => {
+    await renderApp();
+    expect(host.textContent).toContain('Histórias que');
+    await act(async () => [...host.querySelectorAll('nav button')].find(button => button.textContent?.includes('Filmes'))?.click());
+    expect(host.textContent).toContain('CATÁLOGO PESSOAL');
+    expect(host.textContent).toContain('Nada por aqui ainda');
+  });
+
+  it('navega para canais e mostra estado sem stream aprovado', async () => {
+    await renderApp();
+    await act(async () => [...host.querySelectorAll('nav button')].find(button => button.textContent?.includes('TV ao vivo'))?.click());
+    expect(host.textContent).toContain('Nenhuma fonte cadastrada');
+    expect(host.textContent).toContain('Copiar playlist M3U');
+  });
+
+  it('exibe capa, metadados e a fonte autorizada do título', async () => {
+    const movie = {
+      id: 'sintel', title: 'Sintel', type: 'movie', synopsis: 'Uma busca por um dragão.', poster: 'posters/sintel.svg', posterSource: 'Arte original',
+      year: 2010, genres: ['Animação', 'Fantasia'], originalLanguage: 'Inglês', availableAudioLanguages: ['Inglês'], subtitleLanguages: ['Português'],
+      subtitleSource: 'https://durian.blender.org/download/', sourceType: 'licensed', playbackUrl: null, officialUrl: 'https://archive.org/details/Sintel',
+      playbackProvider: 'Internet Archive', sourcePage: 'https://studio.blender.org/projects/sintel/', metadataSource: 'https://studio.blender.org/projects/sintel/',
+      rightsPage: 'https://durian.blender.org/about/', authorizationBasis: 'CC BY 3.0', lastVerified: '2026-10-20', availabilityStatus: 'authorized-playback',
+    };
+    await renderApp({ items: [movie] });
+    await act(async () => [...host.querySelectorAll('nav button')].find(button => button.textContent?.includes('Filmes'))?.click());
+    expect(host.textContent).toContain('2010 · Animação / Fantasia');
+    expect(host.textContent).toContain('Original: Inglês');
+    await act(async () => host.querySelector<HTMLButtonElement>('.poster')?.click());
+    expect(host.textContent).toContain('Assistir na fonte licenciada');
+    expect(host.querySelector<HTMLAnchorElement>('.modal a.secondary')?.href).toBe('https://archive.org/details/Sintel');
+  });
+
+  it('diferencia links oficiais de canais pendentes e exclui pendências da M3U', async () => {
+    await renderApp(undefined, { channels: [{
+      id: 'tv-justica', name: 'TV Justiça', country: 'BR', language: 'Português', category: 'Pública', logo: null,
+      streamUrl: null, officialWebsite: 'https://radioetvjustica.jus.br/', sourcePage: 'https://radioetvjustica.jus.br/',
+      authorizationBasis: 'Player ainda não confirmado.', playbackNotes: 'Pendente.', lastVerified: '2026-10-20', status: 'pending',
+    }] });
+    await act(async () => [...host.querySelectorAll('nav button')].find(button => button.textContent?.includes('TV ao vivo'))?.click());
+    expect(host.textContent).toContain('Pendente de confirmação');
+    expect(host.querySelector<HTMLAnchorElement>('.channels a')?.href).toBe('https://radioetvjustica.jus.br/');
+  });
+});

@@ -1,3 +1,180 @@
-import{useEffect,useMemo,useState}from'react';import{Heart,Search,Play,Tv,Film,MonitorPlay,Copy,ExternalLink,Menu,X,Info}from'lucide-react';import{CatalogItem,Channel,matches}from'./data';import'./style.css';type View='Início'|'TV ao vivo'|'Filmes'|'Séries'|'Minha lista'|'Ajuda';const fallback=`${import.meta.env.BASE_URL}poster.svg`;
-export default function App(){const[items,setItems]=useState<CatalogItem[]>([]),[channels,setChannels]=useState<Channel[]>([]),[view,V]=useState<View>('Início'),[q,Q]=useState(''),[genre,G]=useState(''),[lang,L]=useState(''),[sort,S]=useState('year'),[favs,F]=useState<string[]>(()=>JSON.parse(localStorage.getItem('favorites')||'[]')),[sel,Sel]=useState<CatalogItem|null>(null),[menu,M]=useState(false),[error,E]=useState(false);useEffect(()=>{Promise.all([fetch(`${import.meta.env.BASE_URL}data/catalog.json`).then(r=>r.json()),fetch(`${import.meta.env.BASE_URL}data/channels.json`).then(r=>r.json())]).then(([a,b])=>{setItems(a.items||[]);setChannels(b.channels||[])}).catch(()=>E(true))},[]);useEffect(()=>localStorage.setItem('favorites',JSON.stringify(favs)),[favs]);const list=useMemo(()=>items.filter(i=>matches(i,q,genre,lang,view==='Filmes'?'movie':view==='Séries'?'series':'')&&(view!=='Minha lista'||favs.includes(i.id))).sort((a,b)=>sort==='az'?a.title.localeCompare(b.title,'pt-BR'):(b.year||0)-(a.year||0)),[items,q,genre,lang,view,favs,sort]);const genres=[...new Set(items.flatMap(i=>i.genres))],languages=[...new Set(items.flatMap(i=>i.availableAudioLanguages))];const nav:View[]=['Início','TV ao vivo','Filmes','Séries','Minha lista','Ajuda'];const copy=async()=>{try{await navigator.clipboard.writeText(location.origin+import.meta.env.BASE_URL+'iptv/index.m3u');alert('URL copiada.')}catch{alert('Copie a URL da playlist na barra do navegador e acrescente iptv/index.m3u.')}};return <><header><a className="brand" onClick={()=>V('Início')}><span>▶</span>Meu <b>Streaming</b></a><button className="hamb" onClick={()=>M(!menu)} aria-label="Menu">{menu?<X/>:'☰'}</button><nav className={menu?'open':''}>{nav.map((n,i)=><button className={view===n?'active':''} key={n} onClick={()=>{V(n);Sel(null);M(false)}}>{[<MonitorPlay/>,<Tv/>,<Film/>,<Film/>,<Heart/>,<Info/>][i]}{n}</button>)}</nav><small className="motto">Seu espaço, suas histórias</small></header><main>{error&&<p className="notice">Dados indisponíveis. Atualize a página para tentar novamente.</p>}{view==='Início'&&<><section className="hero"><div className="hero-text"><small>✳　SEU ESPAÇO DE ENTRETENIMENTO</small><h1>Histórias que<br/><em>moram com você.</em></h1><p>Explore títulos, descubra canais abertos e organize seus favoritos em um só lugar.</p><button className="primary" onClick={()=>V('Filmes')}><Play size={15}/> Explorar catálogo</button></div><div className="art"><span>UMA NOVA<br/><b>JORNADA</b></span><span>SEU PRÓXIMO<br/><b>CAPÍTULO</b></span></div><small className="hero-foot">01 / DESCOBRIR <i>CATÁLOGO PESSOAL · BRASIL</i></small></section><div className="quick">{[['TV ao vivo','Canais públicos e autorizados'],['Filmes','Descubra algo novo'],['Minha lista','O que guardou pra depois']].map(([a,b])=><button key={a} onClick={()=>V(a as View)}><span>✳</span><b>{a}<small>{b}</small></b>↗</button>)}</div><section className="catalog"><h2>Para sua próxima sessão</h2><Cards items={list.slice(0,6)} favs={favs} toggle={id=>F(favs.includes(id)?favs.filter(x=>x!==id):[...favs,id])} select={Sel}/></section></>}{['Filmes','Séries','Minha lista'].includes(view)&&<section className="page"><small>CATÁLOGO PESSOAL</small><h1>{view}</h1><p>Pesquise e filtre títulos por gênero e idioma.</p><div className="filters"><label><Search/><input placeholder="Buscar títulos..." aria-label="Buscar títulos" value={q} onChange={e=>Q(e.target.value)}/></label><select value={genre} onChange={e=>G(e.target.value)}><option value="">Todos os gêneros</option>{genres.map(x=><option key={x}>{x}</option>)}</select><select value={lang} onChange={e=>L(e.target.value)}><option value="">Todos os idiomas</option>{languages.map(x=><option key={x}>{x}</option>)}</select><select value={sort} onChange={e=>S(e.target.value)}><option value="year">Mais recentes</option><option value="az">A–Z</option></select></div><Cards items={list} favs={favs} toggle={id=>F(favs.includes(id)?favs.filter(x=>x!==id):[...favs,id])} select={Sel}/></section>}{view==='TV ao vivo'&&<section className="page"><small>TRANSMISSÃO ABERTA</small><h1>TV <em>ao vivo</em></h1><p>Canais com fontes de transmissão e autorização documentadas.</p><button className="secondary" onClick={copy}><Copy size={15}/> Copiar playlist M3U</button><p className="notice"><Info size={16}/> A disponibilidade e compatibilidade dependem da fonte. A lista contém apenas canais aprovados.</p>{channels.filter(c=>c.status==='approved').length===0?<Empty title="Nenhum canal aprovado ainda" text="Adicione fontes autorizadas em public/data/channels.json. A playlist é gerada a partir desses registros."/>:<div className="channels">{channels.filter(c=>c.status==='approved').map(c=><article key={c.id}>📺 <b>{c.name}</b><small>{c.category} · {c.language}</small><a href={c.streamUrl||undefined}>↗</a></article>)}</div>}</section>}{view==='Ajuda'&&<section className="page"><small>GUIA RÁPIDO</small><h1>Ajuda & <em>fontes</em></h1><article className="help"><h3>Como abrir no VLC para Windows</h3><ol><li>Abra o VLC.</li><li>Selecione Mídia → Abrir fluxo de rede.</li><li>Cole a URL publicada da playlist M3U e reproduza.</li></ol><button className="secondary" onClick={copy}><Copy size={15}/> Copiar URL da playlist</button><p>Nem todas as URLs são compatíveis ou permanecem disponíveis.</p><h3>Direitos e disponibilidade</h3><p>Metadados não autorizam reprodução. Registre a base legal e fonte de cada item. A aplicação não inclui links fictícios, credenciais ou extração de serviços comerciais.</p><p>Consulte o README para cadastrar fontes e configurar a publicação.</p></article></section>}</main><footer>MEU STREAMING · SEU ESPAÇO, SUAS HISTÓRIAS <span>FONTES AUTORIZADAS · CATÁLOGO PESSOAL</span></footer>{sel&&<div className="backdrop" onClick={()=>Sel(null)}><article className="modal" onClick={e=>e.stopPropagation()}><button className="x" onClick={()=>Sel(null)}>×</button><img src={sel.poster||fallback} onError={e=>e.currentTarget.src=fallback}/><div><small>{sel.type==='movie'?'FILME':'SÉRIE'} · {sel.year||'Ano indisponível'}</small><h2>{sel.title}</h2><p>{sel.synopsis||'Sinopse indisponível.'}</p><p><b>Gêneros:</b> {sel.genres.join(', ')||'Não informados'}</p><p><b>Áudio:</b> {sel.availableAudioLanguages.join(', ')||'Não confirmado'}</p><p><b>Disponibilidade:</b> {sel.availabilityStatus==='authorized-playback'?'Reprodução autorizada':sel.availabilityStatus==='official-service'?'Serviço oficial':'Sem fonte confirmada'}</p>{sel.playbackUrl&&sel.sourceType==='direct'?<a className="primary" href={sel.playbackUrl}>Assistir</a>:sel.officialUrl?<a className="secondary" href={sel.officialUrl} target="_blank" rel="noreferrer">Abrir serviço oficial <ExternalLink size={15}/></a>:<p className="notice">Não há fonte de reprodução disponível.</p>}</div></article></div>}</>}
-function Cards({items,favs,toggle,select}:{items:CatalogItem[];favs:string[];toggle:(s:string)=>void;select:(i:CatalogItem)=>void}){return items.length?<div className="grid">{items.map((i,n)=><article className="card" key={i.id}><button className="poster" onClick={()=>select(i)}><img src={i.poster||fallback} onError={e=>e.currentTarget.src=fallback}/><span>{String(n+1).padStart(2,'0')}</span></button><button className="heart" aria-label="Favorito" onClick={()=>toggle(i.id)}>{favs.includes(i.id)?'♥':'♡'}</button><b>{i.title}</b><small>{i.year||'Ano indisponível'} · {i.type==='movie'?'Filme':'Série'}</small></article>)}</div>:<Empty title="Nada por aqui ainda" text="Quando houver títulos cadastrados, eles aparecem nesta seção."/>}function Empty({title,text}:{title:string;text:string}){return <div className="empty"><span>✳</span><b>{title}</b><p>{text}</p></div>}
+import { useEffect, useMemo, useState } from 'react';
+import { Copy, ExternalLink, Film, Heart, Info, Menu, MonitorPlay, Play, Search, Tv, X } from 'lucide-react';
+import { CatalogItem, Channel, matches } from './data';
+import './style.css';
+
+type View = 'Início' | 'TV ao vivo' | 'Filmes' | 'Séries' | 'Minha lista' | 'Ajuda';
+const fallback = `${import.meta.env.BASE_URL}poster.svg`;
+const assetUrl = (asset: string | null) => {
+  if (!asset) return fallback;
+  if (/^https?:\/\//i.test(asset)) return asset;
+  return `${import.meta.env.BASE_URL}${asset.replace(/^\/+/, '')}`;
+};
+const channelStatusLabel = (status: Channel['status']) => ({
+  approved: 'Stream direto aprovado',
+  'official-only': 'Somente página oficial',
+  pending: 'Pendente de confirmação',
+  unavailable: 'Indisponível',
+}[status]);
+
+export default function App() {
+  const [items, setItems] = useState<CatalogItem[]>([]);
+  const [channels, setChannels] = useState<Channel[]>([]);
+  const [view, setView] = useState<View>('Início');
+  const [query, setQuery] = useState('');
+  const [genre, setGenre] = useState('');
+  const [language, setLanguage] = useState('');
+  const [sort, setSort] = useState('year');
+  const [favorites, setFavorites] = useState<string[]>(() => JSON.parse(localStorage.getItem('favorites') || '[]'));
+  const [selected, setSelected] = useState<CatalogItem | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    Promise.all([
+      fetch(`${import.meta.env.BASE_URL}data/catalog.json`).then(response => response.json()),
+      fetch(`${import.meta.env.BASE_URL}data/channels.json`).then(response => response.json()),
+    ]).then(([catalog, channelData]) => {
+      setItems(catalog.items || []);
+      setChannels(channelData.channels || []);
+    }).catch(() => setError(true));
+  }, []);
+
+  useEffect(() => localStorage.setItem('favorites', JSON.stringify(favorites)), [favorites]);
+
+  const list = useMemo(() => items
+    .filter(item => matches(
+      item,
+      query,
+      genre,
+      language,
+      view === 'Filmes' ? 'movie' : view === 'Séries' ? 'series' : '',
+    ) && (view !== 'Minha lista' || favorites.includes(item.id)))
+    .sort((a, b) => sort === 'az' ? a.title.localeCompare(b.title, 'pt-BR') : (b.year || 0) - (a.year || 0)),
+  [items, query, genre, language, view, favorites, sort]);
+
+  const genres = [...new Set(items.flatMap(item => item.genres))];
+  const languages = [...new Set(items.flatMap(item => [item.originalLanguage, ...item.availableAudioLanguages]).filter((value): value is string => Boolean(value)))];
+  const visibleChannels = channels.filter(channel => channel.status !== 'unavailable');
+  const nav: View[] = ['Início', 'TV ao vivo', 'Filmes', 'Séries', 'Minha lista', 'Ajuda'];
+
+  const changeView = (nextView: View) => {
+    setView(nextView);
+    setSelected(null);
+    setMenuOpen(false);
+  };
+  const toggleFavorite = (id: string) => setFavorites(current => current.includes(id)
+    ? current.filter(favoriteId => favoriteId !== id)
+    : [...current, id]);
+  const copyPlaylistUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(location.origin + import.meta.env.BASE_URL + 'iptv/index.m3u');
+      alert('URL copiada.');
+    } catch {
+      alert('Copie a URL da playlist na barra do navegador e acrescente iptv/index.m3u.');
+    }
+  };
+
+  return <>
+    <header>
+      <a className="brand" onClick={() => changeView('Início')}><span>▶</span>Meu <b>Streaming</b></a>
+      <button className="hamb" onClick={() => setMenuOpen(!menuOpen)} aria-label="Menu">{menuOpen ? <X /> : '☰'}</button>
+      <nav className={menuOpen ? 'open' : ''}>
+        {nav.map((name, index) => <button className={view === name ? 'active' : ''} key={name} onClick={() => changeView(name)}>
+          {[<MonitorPlay />, <Tv />, <Film />, <Film />, <Heart />, <Info />][index]}{name}
+        </button>)}
+      </nav>
+      <small className="motto">Seu espaço, suas histórias</small>
+    </header>
+
+    <main>
+      {error && <p className="notice">Dados indisponíveis. Atualize a página para tentar novamente.</p>}
+
+      {view === 'Início' && <>
+        <section className="hero">
+          <div className="hero-text"><small>✳　SEU ESPAÇO DE ENTRETENIMENTO</small><h1>Histórias que<br /><em>moram com você.</em></h1><p>Explore títulos, descubra canais abertos e organize seus favoritos em um só lugar.</p><button className="primary" onClick={() => changeView('Filmes')}><Play size={15} /> Explorar catálogo</button></div>
+          <div className="art"><span>UMA NOVA<br /><b>JORNADA</b></span><span>SEU PRÓXIMO<br /><b>CAPÍTULO</b></span></div>
+          <small className="hero-foot">01 / DESCOBRIR <i>CATÁLOGO PESSOAL · BRASIL</i></small>
+        </section>
+        <div className="quick">{[['TV ao vivo', 'Canais públicos e autorizados'], ['Filmes', 'Descubra algo novo'], ['Minha lista', 'O que guardou pra depois']].map(([title, subtitle]) => <button key={title} onClick={() => changeView(title as View)}><span>✳</span><b>{title}<small>{subtitle}</small></b>↗</button>)}</div>
+        <section className="catalog"><h2>Para sua próxima sessão</h2><Cards items={list.slice(0, 6)} favorites={favorites} toggle={toggleFavorite} select={setSelected} /></section>
+      </>}
+
+      {['Filmes', 'Séries', 'Minha lista'].includes(view) && <section className="page">
+        <small>CATÁLOGO PESSOAL</small><h1>{view}</h1><p>Pesquise e filtre títulos por gênero e idioma.</p>
+        <div className="filters">
+          <label><Search /><input placeholder="Buscar títulos..." aria-label="Buscar títulos" value={query} onChange={event => setQuery(event.target.value)} /></label>
+          <select value={genre} onChange={event => setGenre(event.target.value)}><option value="">Todos os gêneros</option>{genres.map(value => <option key={value}>{value}</option>)}</select>
+          <select value={language} onChange={event => setLanguage(event.target.value)}><option value="">Todos os idiomas</option>{languages.map(value => <option key={value}>{value}</option>)}</select>
+          <select value={sort} onChange={event => setSort(event.target.value)}><option value="year">Mais recentes</option><option value="az">A–Z</option></select>
+        </div>
+        <Cards items={list} favorites={favorites} toggle={toggleFavorite} select={setSelected} />
+      </section>}
+
+      {view === 'TV ao vivo' && <section className="page">
+        <small>TRANSMISSÕES E PÁGINAS OFICIAIS</small><h1>TV <em>ao vivo</em></h1><p>Links levam às fontes oficiais. Só streams com autorização documentada entram na playlist M3U.</p>
+        <button className="secondary" onClick={copyPlaylistUrl}><Copy size={15} /> Copiar playlist M3U</button>
+        <p className="notice"><Info size={16} /> Canais sem URL direta aprovada abrem a página oficial. A compatibilidade com VLC não é presumida.</p>
+        {visibleChannels.length === 0
+          ? <Empty title="Nenhuma fonte cadastrada" text="Os canais aparecem aqui quando há uma fonte oficial ou documentação suficiente para registrar a pendência." />
+          : <div className="channels">{visibleChannels.map(channel => <article key={channel.id}>
+            <span aria-hidden="true">📺</span><div className="channel-copy"><b>{channel.name}</b><small>{channel.category} · {channel.language}</small><small className={`channel-status ${channel.status}`}>{channelStatusLabel(channel.status)}</small><p>{channel.authorizationBasis}</p><small>{channel.playbackNotes}</small></div>
+            {channel.status === 'approved' && channel.streamUrl
+              ? <a className="secondary" href={channel.streamUrl} target="_blank" rel="noreferrer">Assistir <ExternalLink size={14} /></a>
+              : channel.officialWebsite
+                ? <a className="secondary" href={channel.officialWebsite} target="_blank" rel="noreferrer">{channel.status === 'pending' ? 'Site oficial' : 'Abrir fonte oficial'} <ExternalLink size={14} /></a>
+                : <span className="channel-status">Sem link confirmado</span>}
+          </article>)}</div>}
+      </section>}
+
+      {view === 'Ajuda' && <section className="page"><small>GUIA RÁPIDO</small><h1>Ajuda & <em>fontes</em></h1><article className="help">
+        <h3>Como abrir uma playlist aprovada no VLC para Windows</h3><ol><li>Abra o VLC.</li><li>Selecione Mídia → Abrir fluxo de rede.</li><li>Cole a URL publicada da playlist M3U e reproduza.</li></ol><button className="secondary" onClick={copyPlaylistUrl}><Copy size={15} /> Copiar URL da playlist</button>
+        <p>A playlist inclui somente streams diretos aprovados e documentados. Um link para a página oficial pode funcionar apenas no navegador.</p><h3>Direitos e disponibilidade</h3><p>Metadados não concedem direitos de reprodução. O catálogo diferencia reprodução autorizada, serviço oficial e registro informativo. Canais pendentes e links externos não são transformados em streams M3U.</p><p>Consulte o README para as fontes, licenças e datas de verificação.</p>
+      </article></section>}
+    </main>
+
+    <footer>MEU STREAMING · SEU ESPAÇO, SUAS HISTÓRIAS <span>FONTES AUTORIZADAS · CATÁLOGO PESSOAL</span></footer>
+
+    {selected && <div className="backdrop" onClick={() => setSelected(null)}><article className="modal" onClick={event => event.stopPropagation()}>
+      <button className="x" onClick={() => setSelected(null)} aria-label="Fechar">×</button>
+      <img src={assetUrl(selected.poster)} alt={`Capa original de ${selected.title}`} onError={event => { event.currentTarget.src = fallback; }} />
+      <div>
+        <small>{selected.type === 'movie' ? 'FILME' : 'SÉRIE'} · {selected.year || 'Ano indisponível'}</small><h2>{selected.title}</h2><p>{selected.synopsis || 'Sinopse indisponível.'}</p>
+        <p><b>Gêneros:</b> {selected.genres.join(', ') || 'Não informados'}</p>
+        <p><b>Idioma original:</b> {selected.originalLanguage || 'Não confirmado'}</p>
+        <p><b>Áudio confirmado:</b> {selected.availableAudioLanguages.join(', ') || 'Não confirmado'}</p>
+        <p><b>Legendas confirmadas:</b> {selected.subtitleLanguages.join(', ') || 'Não confirmadas'}</p>
+        <p><b>Disponibilidade:</b> {selected.availabilityStatus === 'authorized-playback' ? 'Reprodução autorizada na fonte indicada' : selected.availabilityStatus === 'official-service' ? 'Página de serviço oficial' : selected.availabilityStatus === 'unavailable' ? 'Indisponível' : 'Sem fonte de reprodução confirmada'}</p>
+        {selected.playbackUrl && selected.sourceType === 'direct'
+          ? <a className="primary" href={selected.playbackUrl} target="_blank" rel="noreferrer">Assistir diretamente <ExternalLink size={15} /></a>
+          : selected.officialUrl && selected.availabilityStatus === 'authorized-playback'
+            ? <a className="secondary" href={selected.officialUrl} target="_blank" rel="noreferrer">{selected.sourceType === 'licensed' ? 'Assistir na fonte licenciada' : selected.sourceType === 'official' ? 'Assistir no serviço oficial' : 'Assistir'} <ExternalLink size={15} /></a>
+            : selected.officialUrl
+              ? <a className="secondary" href={selected.officialUrl} target="_blank" rel="noreferrer">Abrir fonte informativa <ExternalLink size={15} /></a>
+              : <p className="notice">Não há fonte de reprodução disponível.</p>}
+        {selected.playbackProvider && <p><b>Fonte de reprodução:</b> {selected.playbackProvider}</p>}
+        {selected.metadataSource && <p><b>Metadados:</b> <a href={selected.metadataSource} target="_blank" rel="noreferrer">consultar fonte <ExternalLink size={12} /></a></p>}
+        {selected.rightsPage && <p><b>Licença e direitos:</b> <a href={selected.rightsPage} target="_blank" rel="noreferrer">consultar fundamento <ExternalLink size={12} /></a></p>}
+        {selected.subtitleSource && selected.subtitleLanguages.length > 0 && <p><b>Fonte das legendas:</b> <a href={selected.subtitleSource} target="_blank" rel="noreferrer">consultar fonte <ExternalLink size={12} /></a></p>}
+        {selected.posterSource && <p><b>Capa:</b> {selected.posterSource}</p>}
+        <p className="verified-date">Verificação documental: {selected.lastVerified || 'data não registrada'}</p>
+      </div>
+    </article></div>}
+  </>;
+}
+
+function Cards({ items, favorites, toggle, select }: { items: CatalogItem[]; favorites: string[]; toggle: (id: string) => void; select: (item: CatalogItem) => void }) {
+  return items.length
+    ? <div className="grid">{items.map((item, index) => <article className="card" key={item.id}>
+      <button className="poster" onClick={() => select(item)} aria-label={`Detalhes de ${item.title}`}><img src={assetUrl(item.poster)} alt={`Capa original de ${item.title}`} onError={event => { event.currentTarget.src = fallback; }} /><span>{String(index + 1).padStart(2, '0')}</span></button>
+      <button className="heart" aria-label={favorites.includes(item.id) ? 'Remover dos favoritos' : 'Adicionar aos favoritos'} onClick={() => toggle(item.id)}>{favorites.includes(item.id) ? '♥' : '♡'}</button>
+      <b>{item.title}</b>
+      <small>{item.year || 'Ano indisponível'} · {item.genres.join(' / ') || (item.type === 'movie' ? 'Filme' : 'Série')}</small>
+      <small className="card-language">Original: {item.originalLanguage || 'não confirmado'} · áudio: {item.availableAudioLanguages.join(', ') || 'não confirmado'}</small>
+    </article>)}</div>
+    : <Empty title="Nada por aqui ainda" text="Quando houver títulos cadastrados, eles aparecem nesta seção." />;
+}
+
+function Empty({ title, text }: { title: string; text: string }) {
+  return <div className="empty"><span>✳</span><b>{title}</b><p>{text}</p></div>;
+}

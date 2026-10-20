@@ -1,1 +1,103 @@
-import fs from'node:fs';const errs=[],warns=[];const read=(p,k)=>{try{const d=JSON.parse(fs.readFileSync(p,'utf8').replace(/^\uFEFF/,''));if(!Array.isArray(d[k]))throw Error(`${k} deve ser uma lista`);return d[k]}catch(e){errs.push(`${p}: ${e.message}`);return[]}};const channels=read('public/data/channels.json','channels'),catalog=read('public/data/catalog.json','items');const check=(arr,name,required)=>{const ids=new Set;arr.forEach((x,n)=>{required.forEach(k=>{if(!(k in x))errs.push(`${name}[${n}]: campo obrigatório ausente: ${k}`)});if(x.id){if(ids.has(x.id))errs.push(`${name}: ID duplicado ${x.id}`);ids.add(x.id)}for(const k of ['streamUrl','officialUrl','sourcePage','playbackUrl'])if(x[k]&&!/^https?:\/\//i.test(x[k]))errs.push(`${name}[${n}]: ${k} inválida`);if(name==='channels'&&x.status==='approved'&&(!x.streamUrl||!x.sourcePage||!x.authorizationBasis))errs.push(`${name}[${n}]: aprovado sem fonte/base legal/stream`);if(name==='items'&&x.sourceType==='direct'&&(!x.playbackUrl||!x.authorizationBasis||!x.sourcePage))errs.push(`${name}[${n}]: reprodução direta sem prova de autorização`)})};check(channels,'channels',['id','name','country','language','category','status']);check(catalog,'items',['id','title','type','synopsis','genres','sourceType','availabilityStatus']);if(channels.length===0)warns.push('Nenhum canal cadastrado; playlist permanecerá vazia.');if(catalog.length===0)warns.push('Catálogo vazio; não há metadados ou fontes inseridos.');fs.writeFileSync('public/iptv/index.m3u',['#EXTM3U',...channels.filter(c=>c.status==='approved'&&c.streamUrl&&c.sourcePage&&c.authorizationBasis).flatMap(c=>[`#EXTINF:-1 tvg-id="${c.id}" group-title="${c.category}",${c.name}`,c.streamUrl])].join('\n')+'\n');console.log(`Erros: ${errs.length}\nAvisos: ${warns.length}\n${[...errs,...warns].join('\n')||'Validação concluída.'}`);if(errs.length)process.exitCode=1;
+import fs from 'node:fs';
+import path from 'node:path';
+
+const errors = [];
+const warnings = [];
+const readList = (file, key) => {
+  try {
+    const value = JSON.parse(fs.readFileSync(file, 'utf8').replace(/^\uFEFF/, ''));
+    if (!Array.isArray(value[key])) throw new Error(`${key} deve ser uma lista`);
+    return value[key];
+  } catch (error) {
+    errors.push(`${file}: ${error.message}`);
+    return [];
+  }
+};
+const isHttpUrl = value => {
+  if (typeof value !== 'string') return false;
+  try {
+    const url = new URL(value);
+    return ['http:', 'https:'].includes(url.protocol) && !url.username && !url.password;
+  }
+  catch { return false; }
+};
+const checkDate = (value, label) => {
+  if (value === null) return;
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value) || Number.isNaN(Date.parse(`${value}T00:00:00Z`))) {
+    errors.push(`${label}: data deve usar AAAA-MM-DD ou null`);
+  }
+};
+const duplicateIds = (entries, label) => {
+  const ids = new Set();
+  entries.forEach((entry, index) => {
+    if (typeof entry?.id !== 'string' || !entry.id.trim()) errors.push(`${label}[${index}]: ID ausente`);
+    else if (ids.has(entry.id)) errors.push(`${label}: ID duplicado ${entry.id}`);
+    else ids.add(entry.id);
+  });
+};
+
+const channels = readList('public/data/channels.json', 'channels');
+const items = readList('public/data/catalog.json', 'items');
+duplicateIds(channels, 'channels');
+duplicateIds(items, 'items');
+
+const channelRequired = ['id', 'name', 'country', 'language', 'category', 'logo', 'streamUrl', 'officialWebsite', 'sourcePage', 'authorizationBasis', 'playbackNotes', 'lastVerified', 'status'];
+channels.forEach((channel, index) => {
+  const label = `channels[${index}]`;
+  for (const field of channelRequired) if (!(field in channel)) errors.push(`${label}: campo obrigatório ausente: ${field}`);
+  for (const field of ['streamUrl', 'officialWebsite', 'sourcePage']) {
+    if (channel[field] !== null && !isHttpUrl(channel[field])) errors.push(`${label}: ${field} deve ser URL HTTP(S) ou null`);
+  }
+  checkDate(channel.lastVerified, `${label}.lastVerified`);
+  if (!['approved', 'official-only', 'pending', 'unavailable'].includes(channel.status)) errors.push(`${label}: status inválido`);
+  if (channel.status === 'approved' && (!isHttpUrl(channel.streamUrl) || !channel.sourcePage || !channel.authorizationBasis)) {
+    errors.push(`${label}: canal aprovado exige URL direta, fonte documental e base de autorização`);
+  }
+  if (channel.status !== 'approved' && channel.streamUrl !== null) errors.push(`${label}: somente canais aprovados podem ter streamUrl`);
+  if (channel.status === 'official-only' && !isHttpUrl(channel.officialWebsite)) errors.push(`${label}: canal official-only exige link oficial`);
+});
+
+const itemRequired = ['id', 'title', 'type', 'synopsis', 'poster', 'posterSource', 'year', 'genres', 'originalLanguage', 'availableAudioLanguages', 'subtitleLanguages', 'subtitleSource', 'sourceType', 'playbackUrl', 'officialUrl', 'playbackProvider', 'sourcePage', 'metadataSource', 'rightsPage', 'authorizationBasis', 'lastVerified', 'availabilityStatus'];
+items.forEach((item, index) => {
+  const label = `items[${index}]`;
+  for (const field of itemRequired) if (!(field in item)) errors.push(`${label}: campo obrigatório ausente: ${field}`);
+  if (!['movie', 'series'].includes(item.type)) errors.push(`${label}: type inválido`);
+  if (!['direct', 'licensed', 'official', 'info-only'].includes(item.sourceType)) errors.push(`${label}: sourceType inválido`);
+  if (!['authorized-playback', 'official-service', 'unverified', 'unavailable'].includes(item.availabilityStatus)) errors.push(`${label}: availabilityStatus inválido`);
+  for (const field of ['playbackUrl', 'officialUrl', 'sourcePage', 'metadataSource', 'rightsPage', 'subtitleSource']) {
+    if (item[field] !== null && !isHttpUrl(item[field])) errors.push(`${label}: ${field} deve ser URL HTTP(S) ou null`);
+  }
+  if (!Array.isArray(item.genres) || !Array.isArray(item.availableAudioLanguages) || !Array.isArray(item.subtitleLanguages)) errors.push(`${label}: gêneros, idiomas de áudio e legendas devem ser listas`);
+  if (item.poster !== null) {
+    if (typeof item.poster !== 'string' || item.poster.includes('..')) errors.push(`${label}: poster deve ser caminho local seguro ou URL`);
+    else if (isHttpUrl(item.poster)) {
+      if (!item.posterSource) errors.push(`${label}: poster externo exige fonte de uso`);
+    } else {
+      const posterPath = path.resolve('public', item.poster.replace(/^\/+/, ''));
+      if (!posterPath.startsWith(path.resolve('public') + path.sep) || !fs.existsSync(posterPath)) errors.push(`${label}: arquivo de capa não encontrado em public: ${item.poster}`);
+      if (!item.posterSource) errors.push(`${label}: capa local exige descrição de origem`);
+    }
+  }
+  checkDate(item.lastVerified, `${label}.lastVerified`);
+  if (item.availabilityStatus === 'authorized-playback' && !item.playbackUrl && !item.officialUrl) errors.push(`${label}: reprodução autorizada exige link de reprodução`);
+  if (item.sourceType === 'direct' && (!isHttpUrl(item.playbackUrl) || !item.sourcePage || !item.rightsPage || !item.authorizationBasis)) errors.push(`${label}: reprodução direta exige mídia HTTP(S), fontes e base de autorização`);
+  if (item.sourceType === 'licensed' && (!isHttpUrl(item.officialUrl) || !item.rightsPage || !item.authorizationBasis)) errors.push(`${label}: fonte licenciada exige página de reprodução, página de direitos e fundamento`);
+  if (item.sourceType === 'official' && (!isHttpUrl(item.officialUrl) || !item.rightsPage || !item.authorizationBasis)) errors.push(`${label}: serviço oficial exige link oficial, página de direitos e fundamento`);
+  if (item.sourceType === 'info-only' && item.availabilityStatus === 'authorized-playback') errors.push(`${label}: item apenas informativo não pode indicar reprodução autorizada`);
+  if (item.subtitleLanguages.length > 0 && !item.subtitleSource) errors.push(`${label}: legendas listadas exigem fonte de verificação`);
+});
+
+if (!channels.some(channel => channel.status === 'approved')) warnings.push('Nenhum stream direto tem autorização de redistribuição confirmada; a M3U conterá apenas o cabeçalho.');
+if (!items.some(item => item.type === 'series')) warnings.push('Nenhuma série foi cadastrada com reprodução autorizada confirmada.');
+
+if (errors.length === 0) {
+  const approved = channels.filter(channel => channel.status === 'approved' && isHttpUrl(channel.streamUrl) && channel.sourcePage && channel.authorizationBasis);
+  const playlist = ['#EXTM3U', ...approved.flatMap(channel => [
+    `#EXTINF:-1 tvg-id="${channel.id}" group-title="${channel.category}",${channel.name}`,
+    channel.streamUrl,
+  ])].join('\n') + '\n';
+  fs.writeFileSync('public/iptv/index.m3u', playlist, 'utf8');
+}
+
+console.log(`Erros: ${errors.length}\nAvisos: ${warnings.length}\n${[...errors, ...warnings].join('\n') || 'Validação concluída.'}`);
+if (errors.length) process.exitCode = 1;

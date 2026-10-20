@@ -1,1 +1,64 @@
-{"channels":[]}
+{
+  "channels": [
+    {
+      "id": "tv-brasil",
+      "name": "TV Brasil",
+      "country": "BR",
+      "language": "Português",
+      "category": "Pública · notícias e cultura",
+      "logo": null,
+      "streamUrl": null,
+      "officialWebsite": "https://tvbrasil.ebc.com.br/webtv/",
+      "sourcePage": "https://tvbrasil.ebc.com.br/webtv/",
+      "authorizationBasis": "A EBC disponibiliza o player WebTV oficial e informa que só parte da programação pode ser transmitida na web por direitos de exibição. Os termos do portal descrevem reprodução com indicação da fonte, mas não foi confirmada licença geral para republicar o stream. Este registro abre somente a página oficial.",
+      "playbackNotes": "Player na página oficial. A EBC informa restrições de direitos por programa. Não foi verificada URL de mídia para VLC/M3U nem reprodução neste projeto.",
+      "lastVerified": "2026-10-20",
+      "status": "official-only"
+    },
+    {
+      "id": "tv-camara",
+      "name": "TV Câmara",
+      "country": "BR",
+      "language": "Português",
+      "category": "Pública · legislativo",
+      "logo": null,
+      "streamUrl": null,
+      "officialWebsite": "https://www.camara.leg.br/tv/aovivo/embed",
+      "sourcePage": "https://www.camara.leg.br/tv/termos-de-uso/",
+      "authorizationBasis": "Os termos oficiais autorizam retransmissão independente das transmissões legislativas ao vivo sob CC BY 4.0, com atribuição e preservação da marca d'água. A autorização não transforma a página de incorporação em endereço de mídia; este catálogo mantém somente o link oficial e não inclui stream na M3U.",
+      "playbackNotes": "A Câmara identifica a página como link para incorporar a transmissão em tempo real e documenta vídeo H.264. A página/iframe é destinada a navegador; VLC não foi verificado e não há URL direta de mídia cadastrada.",
+      "lastVerified": "2026-10-20",
+      "status": "official-only"
+    },
+    {
+      "id": "tv-senado",
+      "name": "TV Senado",
+      "country": "BR",
+      "language": "Português",
+      "category": "Pública · legislativo e notícias",
+      "logo": null,
+      "streamUrl": null,
+      "officialWebsite": "https://www12.senado.leg.br/tv/programas/ao-vivo",
+      "sourcePage": "https://www12.senado.leg.br/tv/programas/ao-vivo",
+      "authorizationBasis": "Página oficial de programação ao vivo identificada. Não foi localizada autorização geral para redistribuição externa do sinal; o catálogo encaminha o usuário ao site do Senado e não replica o stream.",
+      "playbackNotes": "Página oficial inclui transmissões e gravações. Não foi confirmada URL direta de mídia, compatibilidade VLC ou permissão geral para redistribuição.",
+      "lastVerified": "2026-10-20",
+      "status": "official-only"
+    },
+    {
+      "id": "tv-justica",
+      "name": "TV Justiça",
+      "country": "BR",
+      "language": "Português",
+      "category": "Pública · justiça e notícias",
+      "logo": null,
+      "streamUrl": null,
+      "officialWebsite": "https://radioetvjustica.jus.br/",
+      "sourcePage": "https://radioetvjustica.jus.br/",
+      "authorizationBasis": "O domínio oficial atual foi localizado, mas não foi confirmada uma página estável de transmissão ao vivo nem autorização para reprodução ou redistribuição externa. Registro pendente; não incluir na M3U.",
+      "playbackNotes": "Link leva ao site institucional. Não há player de transmissão confirmado neste registro; compatibilidade de navegador/VLC não verificada.",
+      "lastVerified": "2026-10-20",
+      "status": "pending"
+    }
+  ]
+}

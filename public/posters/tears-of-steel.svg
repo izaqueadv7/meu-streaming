@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 800" role="img" aria-labelledby="title">
+  <title id="title">Capa original para Tears of Steel</title>
+  <defs><linearGradient id="bg" x2="0" y2="1"><stop stop-color="#192e43"/><stop offset=".5" stop-color="#b15f45"/><stop offset="1" stop-color="#171d25"/></linearGradient><linearGradient id="metal"><stop stop-color="#cad3cc"/><stop offset=".45" stop-color="#596a70"/><stop offset="1" stop-color="#c0c5b7"/></linearGradient></defs>
+  <rect width="600" height="800" fill="url(#bg)"/><circle cx="425" cy="250" r="115" fill="#f9ba73" opacity=".6"/><path d="M0 475 155 355l105 87 114-167 226 202v323H0z" fill="#263943"/><path d="M85 610V348l62-74 62 74v262zm224 0V302l67-82 67 82v308z" fill="url(#metal)"/><path d="M102 387h89m-89 60h89m-89 60h89m-89 60h89m202-270h96m-96 60h96m-96 60h96m-96 60h96" stroke="#23313a" stroke-width="13" opacity=".75"/>
+  <path d="M0 636h600v164H0z" fill="#10141be8"/><text x="40" y="690" fill="#efc58e" font-family="Arial,sans-serif" font-size="18" letter-spacing="5">UM CURTA DE FICÇÃO CIENTÍFICA</text><text x="40" y="754" fill="#f7f0e4" font-family="Arial,sans-serif" font-size="51" font-weight="700" letter-spacing="1">TEARS OF STEEL</text><text x="40" y="88" fill="#f3e7d6" font-family="Arial,sans-serif" font-size="17" letter-spacing="4">CAPA ORIGINAL · MEU STREAMING</text>
+</svg>
