@@ -1,5 +1,7 @@
 # Meu Streaming
 
+> Nome do repositório GitHub: `meu-streaming`.
+
 Aplicação estática responsiva em português para organizar filmes e séries, guardar favoritos no navegador e reunir canais gratuitos cuja autorização de transmissão foi documentada. Metadados não concedem direitos de reprodução. Os catálogos começam vazios: nenhuma fonte de transmissão é presumida ou inventada.
 
 ## Recursos
