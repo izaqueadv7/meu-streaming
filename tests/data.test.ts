@@ -3,8 +3,9 @@ import { approvedChannels, makeM3U, validHttpUrl, matches, type CatalogItem, typ
 
 const item = {
   id: 'a', title: 'Filme Árvore', type: 'movie', synopsis: '', poster: null, posterSource: null, year: 2020,
-  genres: ['Drama'], originalLanguage: 'Inglês', availableAudioLanguages: ['Português'], subtitleLanguages: [], subtitleSource: null,
+  genres: ['Drama'], originalLanguage: 'Inglês', languageNotes: null, availableAudioLanguages: ['Português'], subtitleLanguages: [], subtitleSource: null,
   sourceType: 'info-only', playbackUrl: null, officialUrl: null, playbackProvider: null, sourcePage: null, metadataSource: null,
+  playbackMode: 'info-only', embedUrl: null, reproductionCheck: 'not-tested', reproductionCheckedAt: null, licenseLabel: null, attribution: null,
   rightsPage: null, authorizationBasis: null, lastVerified: null, availabilityStatus: 'unverified',
 } as CatalogItem;
 

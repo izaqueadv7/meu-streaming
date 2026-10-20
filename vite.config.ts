@@ -7,5 +7,5 @@ const isGitHubPagesBuild = process.env.GITHUB_ACTIONS === 'true' && Boolean(repo
 export default defineConfig({
   plugins: [react()],
   base: isGitHubPagesBuild ? `/${repositoryName}/` : '/',
-  test: { environment: 'jsdom' },
+  test: { environment: 'jsdom', setupFiles: ['./tests/setup.ts'] },
 });

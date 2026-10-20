@@ -27,6 +27,7 @@ export default function App() {
   const [sort, setSort] = useState('year');
   const [favorites, setFavorites] = useState<string[]>(() => JSON.parse(localStorage.getItem('favorites') || '[]'));
   const [selected, setSelected] = useState<CatalogItem | null>(null);
+  const [playerError, setPlayerError] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [error, setError] = useState(false);
 
@@ -41,6 +42,7 @@ export default function App() {
   }, []);
 
   useEffect(() => localStorage.setItem('favorites', JSON.stringify(favorites)), [favorites]);
+  useEffect(() => setPlayerError(false), [selected?.id]);
 
   const list = useMemo(() => items
     .filter(item => matches(
@@ -114,7 +116,7 @@ export default function App() {
       {view === 'TV ao vivo' && <section className="page">
         <small>TRANSMISSÕES E PÁGINAS OFICIAIS</small><h1>TV <em>ao vivo</em></h1><p>Links levam às fontes oficiais. Só streams com autorização documentada entram na playlist M3U.</p>
         <button className="secondary" onClick={copyPlaylistUrl}><Copy size={15} /> Copiar playlist M3U</button>
-        <p className="notice"><Info size={16} /> Canais sem URL direta aprovada abrem a página oficial. A compatibilidade com VLC não é presumida.</p>
+        <p className="notice"><Info size={16} /> A playlist atual não contém canais: não há URL direta com autorização de redistribuição e compatibilidade com VLC confirmadas. Os cartões abrem as páginas oficiais.</p>
         {visibleChannels.length === 0
           ? <Empty title="Nenhuma fonte cadastrada" text="Os canais aparecem aqui quando há uma fonte oficial ou documentação suficiente para registrar a pendência." />
           : <div className="channels">{visibleChannels.map(channel => <article key={channel.id}>
@@ -144,15 +146,33 @@ export default function App() {
         <p><b>Idioma original:</b> {selected.originalLanguage || 'Não confirmado'}</p>
         <p><b>Áudio confirmado:</b> {selected.availableAudioLanguages.join(', ') || 'Não confirmado'}</p>
         <p><b>Legendas confirmadas:</b> {selected.subtitleLanguages.join(', ') || 'Não confirmadas'}</p>
-        <p><b>Disponibilidade:</b> {selected.availabilityStatus === 'authorized-playback' ? 'Reprodução autorizada na fonte indicada' : selected.availabilityStatus === 'official-service' ? 'Página de serviço oficial' : selected.availabilityStatus === 'unavailable' ? 'Indisponível' : 'Sem fonte de reprodução confirmada'}</p>
-        {selected.playbackUrl && selected.sourceType === 'direct'
-          ? <a className="primary" href={selected.playbackUrl} target="_blank" rel="noreferrer">Assistir diretamente <ExternalLink size={15} /></a>
+        <p><b>Disponibilidade:</b> {selected.availabilityStatus === 'authorized-playback' ? 'Fonte oficial ou licenciada identificada' : selected.availabilityStatus === 'official-service' ? 'Página de serviço oficial' : selected.availabilityStatus === 'unavailable' ? 'Fonte marcada como indisponível' : 'Sem autorização de reprodução confirmada'}</p>
+        {selected.availabilityStatus === 'unavailable'
+          ? <p className="notice">Esta fonte está marcada como indisponível. Nenhum player será iniciado.</p>
+          : selected.playbackMode === 'youtube-embed' && selected.embedUrl && selected.availabilityStatus === 'authorized-playback'
+            ? <section className="official-player" aria-label={`Player oficial de ${selected.title}`}>
+                <iframe title={`Player oficial de ${selected.title}`} src={selected.embedUrl} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen onError={() => setPlayerError(true)} />
+                <p className="player-note">Player oficial incorporado. A disponibilidade pode variar por região ou configuração do YouTube. {playerError ? 'O player não carregou; abra a fonte original.' : 'Se o vídeo não iniciar, abra a fonte original.'}</p>
+              </section>
+            : selected.playbackMode === 'direct-html5' && selected.playbackUrl && selected.availabilityStatus === 'authorized-playback'
+              ? <section className="official-player" aria-label={`Player direto de ${selected.title}`}>
+                  <video controls preload="metadata" src={selected.playbackUrl} onError={() => setPlayerError(true)}>Seu navegador não oferece suporte a este vídeo.</video>
+                  {playerError && <p className="notice">Não foi possível reproduzir este arquivo aqui. Use a página oficial da fonte.</p>}
+                </section>
+              : null}
+        {selected.availabilityStatus !== 'unavailable' && selected.playbackUrl && selected.sourceType === 'direct'
+          ? <a className="primary" href={selected.playbackUrl} target="_blank" rel="noreferrer">Abrir mídia oficial <ExternalLink size={15} /></a>
           : selected.officialUrl && selected.availabilityStatus === 'authorized-playback'
-            ? <a className="secondary" href={selected.officialUrl} target="_blank" rel="noreferrer">{selected.sourceType === 'licensed' ? 'Assistir na fonte licenciada' : selected.sourceType === 'official' ? 'Assistir no serviço oficial' : 'Assistir'} <ExternalLink size={15} /></a>
-            : selected.officialUrl
+            ? <a className="secondary" href={selected.officialUrl} target="_blank" rel="noreferrer">{selected.sourceType === 'licensed' ? 'Abrir fonte licenciada' : 'Abrir player oficial'} <ExternalLink size={15} /></a>
+            : selected.officialUrl && selected.availabilityStatus !== 'unavailable'
               ? <a className="secondary" href={selected.officialUrl} target="_blank" rel="noreferrer">Abrir fonte informativa <ExternalLink size={15} /></a>
-              : <p className="notice">Não há fonte de reprodução disponível.</p>}
+              : null}
+        {selected.sourcePage && selected.sourcePage !== selected.officialUrl && <p><b>Projeto / fonte original:</b> <a href={selected.sourcePage} target="_blank" rel="noreferrer">abrir página oficial <ExternalLink size={12} /></a></p>}
         {selected.playbackProvider && <p><b>Fonte de reprodução:</b> {selected.playbackProvider}</p>}
+        {selected.licenseLabel && <p><b>Licença:</b> {selected.licenseLabel}</p>}
+        {selected.attribution && <p><b>Atribuição:</b> {selected.attribution}</p>}
+        {selected.languageNotes && <p><b>Nota de idioma:</b> {selected.languageNotes}</p>}
+        <p><b>Checagem da reprodução:</b> {selected.reproductionCheck === 'page-http-200' ? `A página da fonte respondeu HTTP 200 em ${selected.reproductionCheckedAt}; isso não confirma que o vídeo foi reproduzido.` : selected.reproductionCheck === 'documentation-only' ? 'Somente documentação consultada; player não testado.' : 'Player não testado.'}</p>
         {selected.metadataSource && <p><b>Metadados:</b> <a href={selected.metadataSource} target="_blank" rel="noreferrer">consultar fonte <ExternalLink size={12} /></a></p>}
         {selected.rightsPage && <p><b>Licença e direitos:</b> <a href={selected.rightsPage} target="_blank" rel="noreferrer">consultar fundamento <ExternalLink size={12} /></a></p>}
         {selected.subtitleSource && selected.subtitleLanguages.length > 0 && <p><b>Fonte das legendas:</b> <a href={selected.subtitleSource} target="_blank" rel="noreferrer">consultar fonte <ExternalLink size={12} /></a></p>}
